@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Control de Tiempos Jornada Conductores EMT Fuenlabrada</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Estilos adicionales para mejorar la apariencia */
+        th, td {
+            white-space: nowrap;
+            font-size: 14px;
+            padding: 8px 12px;
+        }
+        .table-header {
+            background-color: #1E3A8A; /* Azul oscuro */
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        .table-footer {
+            background-color: #E5E7EB; /* Gris claro */
+            font-weight: bold;
+            position: sticky;
+            bottom: 0;
+            z-index: 2;
+        }
+        .table-row {
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .table-row:hover {
+            background-color: #D1D5DB; /* Gris más oscuro al pasar el cursor */
+        }
+        .horas-extras {
+            font-weight: bold;
+            background-color: #FDE68A; /* Fondo amarillo */
+        }
+        .wider-column {
+            min-width: 120px;
+        }
+        /* Estilos para ajustar la tabla y que se vea completa */
+        .table-container {
+            overflow-x: auto;
+        }
+        table {
+            min-width: 100%;
+            border-collapse: collapse;
+        }
+        @media (max-width: 1024px) {
+            .table-container {
+                overflow-x: auto;
+            }
+            table {
+                min-width: 1000px; /* Ajusta este valor según sea necesario */
+            }
+        }
+        /* Ajustes para que el scroll no cubra el ancho total */
+        .table-wrapper::-webkit-scrollbar {
+            width: 8px;
+        }
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background-color: #9CA3AF; /* Color del scroll */
+            border-radius: 4px;
+        }
+        .table-wrapper::-webkit-scrollbar-track {
+            background-color: #E5E7EB;
+        }
+        /* Botones mejorados */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            transition: background-color 0.3s, transform 0.2s;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            margin: 0.25rem; /* Añadido margen para evitar superposición en pantallas pequeñas */
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        /* Colores personalizados para botones */
+        .btn-green {
+            background-color: #10B981; /* Verde */
+            color: white;
+        }
+        .btn-green:hover {
+            background-color: #059669;
+        }
+        .btn-yellow {
+            background-color: #F59E0B; /* Amarillo */
+            color: white;
+        }
+        .btn-yellow:hover {
+            background-color: #D97706;
+        }
+        .btn-red {
+            background-color: #EF4444; /* Rojo */
+            color: white;
+        }
+        .btn-red:hover {
+            background-color: #DC2626;
+        }
+        .btn-blue {
+            background-color: #3B82F6; /* Azul */
+            color: white;
+        }
+        .btn-blue:hover {
+            background-color: #2563EB;
+        }
+        .btn-indigo {
+            background-color: #6366F1; /* Índigo */
+            color: white;
+        }
+        .btn-indigo:hover {
+            background-color: #4F46E5;
+        }
+        .btn-purple {
+            background-color: #8B5CF6; /* Púrpura */
+            color: white;
+        }
+        .btn-purple:hover {
+            background-color: #7C3AED;
+        }
+        .btn-teal {
+            background-color: #14B8A6; /* Teal */
+            color: white;
+        }
+        .btn-teal:hover {
+            background-color: #0D9488;
+        }
+        /* Estilos para los títulos de las tablas */
+        .titulo-tabla {
+            text-align: center;
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #1E3A8A; /* Azul oscuro */
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Encabezado -->
+    <div class="bg-blue-800 text-white p-6">
+        <h1 class="text-3xl font-bold text-center">Control de Tiempos Jornada Conductores EMT Fuenlabrada</h1>
+    </div>
+
+    <!-- Contenedor Principal -->
+    <div class="w-full mt-8 px-4 lg:px-16">
+        <!-- Botones de Exportar JSON, Importar JSON y Eliminar Registros -->
+        <div class="flex flex-wrap justify-center space-x-4 mb-6">
+            <!-- Eliminado el botón Exportar CSV de aquí -->
+            <button id="exportarJSON" class="btn btn-green">
+                Exportar JSON
+            </button>
+            <input type="file" id="importarJSON" accept=".json" class="hidden">
+            <button id="btnImportarJSON" class="btn btn-yellow">
+                Importar JSON
+            </button>
+            <button id="eliminarRegistros" class="btn btn-red">
+                Eliminar Registros
+            </button>
+        </div>
+
+        <!-- Formulario -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h3 class="text-2xl font-semibold mb-6 text-center">Registro de Jornada</h3>
+            <form id="registroForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Fecha -->
+                <div>
+                    <label for="fecha" class="block text-sm font-medium text-gray-700">
+                        Fecha:<span class="text-red-600">*</span>
+                    </label>
+                    <input type="date" id="fecha" name="fecha" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+                <!-- Número de Conductor -->
+                <div>
+                    <label for="numeroConductor" class="block text-sm font-medium text-gray-700">
+                        N° Conductor:<span class="text-red-600">*</span>
+                    </label>
+                    <input type="number" id="numeroConductor" name="numeroConductor"
+                           class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+                <!-- Servicio -->
+                <div>
+                    <label for="servicio" class="block text-sm font-medium text-gray-700">
+                        Servicio:<span class="text-red-600">*</span>
+                    </label>
+                    <!-- Campo de entrada editable con datalist -->
+                    <input list="serviciosList" id="servicio" name="servicio" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500" required>
+                    <datalist id="serviciosList">
+                        <!-- Opciones dinámicas de servicios -->
+                    </datalist>
+                </div>
+                <!-- Línea -->
+                <div>
+                    <label for="linea" class="block text-sm font-medium text-gray-700">
+                        Línea:
+                    </label>
+                    <input type="text" id="linea" name="linea" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <!-- Hora de Inicio (Hoja de Servicios) -->
+                <div>
+                    <label for="horaInicioHoja" class="block text-sm font-medium text-gray-700">
+                        Inicio (Hoja):
+                    </label>
+                    <input type="time" id="horaInicioHoja" name="horaInicioHoja" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <!-- Hora de Fin (Hoja de Servicios) -->
+                <div>
+                    <label for="horaFinHoja" class="block text-sm font-medium text-gray-700">
+                        Fin (Hoja):
+                    </label>
+                    <input type="time" id="horaFinHoja" name="horaFinHoja" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <!-- Hora de Inicio -->
+                <div>
+                    <label for="horaInicio" class="block text-sm font-medium text-gray-700">Inicio:</label>
+                    <input type="time" id="horaInicio" name="horaInicio" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <!-- Hora de Salida -->
+                <div>
+                    <label for="horaSalida" class="block text-sm font-medium text-gray-700">Salida:</label>
+                    <input type="time" id="horaSalida" name="horaSalida" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <!-- Número de Autobús -->
+                <div>
+                    <label for="numeroAutobus" class="block text-sm font-medium text-gray-700">N° Bus:</label>
+                    <input type="number" id="numeroAutobus" name="numeroAutobus" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <!-- Número Total de Viajeros -->
+                <div>
+                    <label for="totalViajeros" class="block text-sm font-medium text-gray-700">Viajeros:</label>
+                    <input type="number" id="totalViajeros" name="totalViajeros"
+                           class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <!-- Venta Total de Billetes -->
+                <div>
+                    <label for="ventaBilletes" class="block text-sm font-medium text-gray-700">Venta:</label>
+                    <input type="number" id="ventaBilletes" name="ventaBilletes"
+                           class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <!-- Observaciones -->
+                <div class="md:col-span-2">
+                    <label for="observaciones" class="block text-sm font-medium text-gray-700">Observaciones:</label>
+                    <textarea id="observaciones" name="observaciones" rows="3"
+                              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+            </form>
+            <!-- Botones -->
+            <div class="flex flex-wrap justify-center mt-6 space-x-4">
+                <button id="guardarRegistro" class="btn btn-green">
+                    Guardar Registro
+                </button>
+                <button id="limpiarFormulario" class="btn btn-yellow">
+                    Limpiar Formulario
+                </button>
+                <button id="diaLibre" class="btn btn-indigo">
+                    Día Libre
+                </button>
+                <button id="diaAsuntosPropios" class="btn btn-purple">
+                    Día Asuntos Propios
+                </button>
+                <button id="vacaciones" class="btn btn-teal">
+                    Vacaciones
+                </button>
+            </div>
+        </div>
+
+        <!-- Título con Mes y Año y botones de navegación -->
+        <div class="flex flex-col items-center mb-4">
+            <h2 class="text-2xl font-semibold uppercase text-center">
+                REGISTROS DEL MES
+            </h2>
+            <h3 id="tituloMes" class="text-xl font-semibold text-center mt-2">
+                <span id="mesActual"></span> <span id="anioActual"></span>
+            </h3>
+            <div class="flex items-center justify-center mt-2 space-x-4">
+                <button id="mesAnterior" class="btn btn-blue">
+                    ← Mes Anterior
+                </button>
+                <button id="mesSiguiente" class="btn btn-blue">
+                    Mes Siguiente →
+                </button>
+                <button id="exportarCSVMes" class="btn btn-green">
+                    Exportar CSV
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabla de Registros -->
+        <div class="table-container">
+            <div class="table-wrapper">
+                <table id="tablaRegistros" class="min-w-full table-auto border border-gray-300">
+                    <thead>
+                        <tr class="table-header">
+                            <th class="border">Fecha</th>
+                            <th class="border">N° Cond.</th>
+                            <th class="border">Línea</th>
+                            <th class="border">Serv.</th>
+                            <th class="border">Inicio (Hoja)</th>
+                            <th class="border">Fin (Hoja)</th>
+                            <th class="border">Inicio</th>
+                            <th class="border">Salida</th>
+                            <th class="border">Tiempo Hoja</th>
+                            <th class="border">Tiempo Op.</th>
+                            <th class="border">Exceso</th>
+                            <th class="border">N° Bus</th>
+                            <th class="border">Viajeros</th>
+                            <th class="border">Venta</th>
+                            <th class="border">Liquidación</th>
+                            <th class="border wider-column">Obs.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Registros dinámicos -->
+                    </tbody>
+                    <!-- Eliminada la fila "Total Mes" -->
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla Anual -->
+    <div class="w-full mt-8 px-4 lg:px-16">
+        <!-- Título con Año y botones de navegación -->
+        <div class="flex flex-col items-center mb-4">
+            <h2 class="text-2xl font-semibold uppercase text-center">
+                RESUMEN ANUAL
+            </h2>
+            <h3 class="text-xl font-semibold text-center mt-2">
+                <span id="anioActualResumen"></span>
+            </h3>
+            <div class="flex items-center justify-center mt-2 space-x-4">
+                <button id="anioAnterior" class="btn btn-blue">
+                    ← Año Anterior
+                </button>
+                <button id="anioSiguiente" class="btn btn-blue">
+                    Año Siguiente →
+                </button>
+                <button id="exportarCSVAnual" class="btn btn-green">
+                    Exportar CSV
+                </button>
+            </div>
+        </div>
+        <div class="table-container">
+            <div class="table-wrapper" style="max-height: 400px;">
+                <table id="tablaAnual" class="min-w-full table-auto border border-gray-300">
+                    <thead>
+                        <tr class="table-header">
+                            <th class="border">Mes</th>
+                            <th class="border">Tiempo Hoja</th>
+                            <th class="border">Tiempo Op.</th>
+                            <th class="border">Horas extras</th> <!-- Cambiado de "Exceso" a "Horas extras" -->
+                            <th class="border">Viajeros</th>
+                            <th class="border">Venta</th>
+                            <th class="border">Liquidación</th>
+                            <th class="border">Días Libres</th>
+                            <th class="border">Vacaciones</th>
+                            <th class="border">Días Asuntos Propios</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Registros anuales dinámicos -->
+                        <!-- Se añadirá la fila "Total Anual" mediante JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Análisis de Datos -->
+    <div class="w-full mt-12 px-4 lg:px-16">
+        <h2 class="titulo-tabla">Análisis de Datos</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Gráfico 1: Días trabajados por línea -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4">Días trabajados por línea</h3>
+                <canvas id="graficoDiasPorLinea"></canvas>
+            </div>
+            <!-- Gráfico 2: Viajeros Transportados por Línea -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4">Viajeros Transportados por Línea</h3>
+                <canvas id="graficoPasajerosPorLinea"></canvas>
+            </div>
+            <!-- Gráfico 3: Horas Trabajadas por Línea -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4">Horas Trabajadas por Línea</h3>
+                <canvas id="graficoHorasPorLinea"></canvas>
+            </div>
+            <!-- Gráfico 4: Servicios que Más Exceden la Jornada -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4">Servicios que Más Exceden la Jornada</h3>
+                <canvas id="graficoExcesoPorServicio"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Declaración de Variables para los Gráficos
+        let graficoDiasPorLinea;
+        let graficoPasajerosPorLinea;
+        let graficoHorasPorLinea;
+        let graficoExcesoPorServicio;
+
+        // Datos de servicios actualizados
+        const serviciosData = [
+            // Línea 1 - Lunes a Viernes
+            { servicio: '1', linea: 'L1', entrada: '05:45', salida: '13:36' },
+            { servicio: '2', linea: 'L1', entrada: '13:36', salida: '21:30' },
+            { servicio: '3', linea: 'L1', entrada: '06:00', salida: '14:30' },
+            { servicio: '4', linea: 'L1', entrada: '14:30', salida: '23:00' },
+            { servicio: '5', linea: 'L1', entrada: '06:15', salida: '14:08' },
+            { servicio: '6', linea: 'L1', entrada: '14:08', salida: '22:03' },
+            { servicio: '7', linea: 'L1', entrada: '06:55', salida: '15:09' },
+            { servicio: '8', linea: 'L1', entrada: '15:09', salida: '23:30' },
+            { servicio: '9', linea: 'L1', entrada: '05:35', salida: '14:05' },
+            { servicio: '10', linea: 'L1', entrada: '14:05', salida: '22:30' },
+            { servicio: '11', linea: 'L1', entrada: '05:55', salida: '14:25' },
+            { servicio: '12', linea: 'L1', entrada: '14:25', salida: '22:45' },
+            // Línea 4 - Lunes a Viernes
+            { servicio: '13', linea: 'L4', entrada: '05:45', salida: '13:45' },
+            { servicio: '14', linea: 'L4', entrada: '13:45', salida: '22:00' },
+            { servicio: '15', linea: 'L4', entrada: '06:00', salida: '14:00' },
+            { servicio: '16', linea: 'L4', entrada: '14:00', salida: '22:15' },
+            { servicio: '17', linea: 'L4', entrada: '05:45', salida: '14:15' },
+            { servicio: '18', linea: 'L4', entrada: '14:15', salida: '22:30' },
+            { servicio: '19', linea: 'L4', entrada: '05:55', salida: '14:00' },
+            { servicio: '20', linea: 'L4', entrada: '16:30', salida: '23:45' },
+            { servicio: '21', linea: 'L4', entrada: '07:45', salida: '15:30' },
+            { servicio: '22', linea: 'L4', entrada: '15:30', salida: '23:15' },
+            // Línea 2 - Lunes a Viernes
+            { servicio: '23', linea: 'L2', entrada: '06:10', salida: '14:05' },
+            { servicio: '24', linea: 'L2', entrada: '14:05', salida: '21:05' },
+            { servicio: '25', linea: 'L2', entrada: '07:05', salida: '14:19' },
+            { servicio: '26', linea: 'L2', entrada: '14:19', salida: '21:19' },
+            { servicio: '27', linea: 'L2', entrada: '06:15', salida: '14:33' },
+            { servicio: '28', linea: 'L2', entrada: '14:33', salida: '22:30' },
+            { servicio: '29', linea: 'L2', entrada: '06:45', salida: '14:47' },
+            { servicio: '30', linea: 'L2', entrada: '14:47', salida: '15:01' },
+            { servicio: '31', linea: 'L2', entrada: '07:45', salida: '15:01' },
+            { servicio: '32', linea: 'L2', entrada: '16:25', salida: '00:15' },
+            { servicio: '33', linea: 'L2', entrada: '08:00', salida: '15:50' },
+            { servicio: '34', linea: 'L2', entrada: '15:50', salida: '23:45' },
+            // Línea 3 - Lunes a Viernes
+            { servicio: '35', linea: 'L3', entrada: '06:45', salida: '14:30' },
+            { servicio: '36', linea: 'L3', entrada: '14:30', salida: '22:00' },
+            { servicio: '37', linea: 'L3', entrada: '07:00', salida: '14:45' },
+            { servicio: '38', linea: 'L3', entrada: '14:45', salida: '22:15' },
+            { servicio: '39', linea: 'L3', entrada: '07:15', salida: '15:00' },
+            { servicio: '40', linea: 'L3', entrada: '16:15', salida: '23:40' },
+            { servicio: '41', linea: 'L3', entrada: '07:30', salida: '15:15' },
+            { servicio: '42', linea: 'L3', entrada: '15:15', salida: '22:40' },
+            { servicio: '43', linea: 'L3', entrada: '06:20', salida: '14:15' },
+            { servicio: '44', linea: 'L3', entrada: '16:45', salida: '00:15' },
+            // Otros Servicios - Lunes a Viernes
+            { servicio: '45', linea: 'Otros', entrada: '', salida: '' },
+            { servicio: '46', linea: 'Otros', entrada: '', salida: '' },
+            { servicio: '47', linea: 'Otros', entrada: '13:45', salida: '21:53' },
+            { servicio: '48', linea: 'Otros', entrada: '15:01', salida: '22:07' },
+            { servicio: '49', linea: 'Otros', entrada: '14:00', salida: '21:30' },
+            { servicio: '50', linea: 'Otros', entrada: '22:45', salida: '06:00' },
+            // Línea 6 - Lunes a Viernes
+            { servicio: '51', linea: 'L6', entrada: '07:45', salida: '15:35' },
+            { servicio: '52', linea: 'L6', entrada: '14:00', salida: '21:50' },
+            // Línea 1 - Sábado
+            { servicio: 'S1', linea: 'L1', entrada: '07:00', salida: '14:46' },
+            { servicio: 'S2', linea: 'L1', entrada: '14:46', salida: '22:30' },
+            { servicio: 'S3', linea: 'L1', entrada: '06:35', salida: '14:28' },
+            { servicio: 'S4', linea: 'L1', entrada: '14:28', salida: '22:49' },
+            { servicio: 'S5', linea: 'L1', entrada: '07:40', salida: '15:28' },
+            { servicio: 'S6', linea: 'L1', entrada: '15:28', salida: '23:16' },
+            { servicio: 'S7', linea: 'L1', entrada: '07:05', salida: '15:10' },
+            { servicio: 'S8', linea: 'L1', entrada: '15:10', salida: '22:12' },
+            // Línea 4 - Sábado
+            { servicio: 'S9', linea: 'L4', entrada: '06:45', salida: '15:00' },
+            { servicio: 'S10', linea: 'L4', entrada: '15:00', salida: '23:15' },
+            { servicio: 'S11', linea: 'L4', entrada: '07:10', salida: '15:25' },
+            { servicio: 'S12', linea: 'L4', entrada: '15:25', salida: '23:40' },
+            { servicio: 'S13', linea: 'L4', entrada: '06:45', salida: '14:35' },
+            { servicio: 'S14', linea: 'L4', entrada: '14:35', salida: '22:50' },
+            // Línea 2 - Fin de Semana
+            { servicio: 'F15', linea: 'L2', entrada: '07:35', salida: '15:00' },
+            { servicio: 'F16', linea: 'L2', entrada: '15:00', salida: '22:20' },
+            { servicio: 'F17', linea: 'L2', entrada: '07:55', salida: '15:20' },
+            { servicio: 'F18', linea: 'L2', entrada: '15:20', salida: '22:40' },
+            { servicio: 'F19', linea: 'L2', entrada: '08:15', salida: '15:40' },
+            { servicio: 'F20', linea: 'L2', entrada: '15:40', salida: '23:15' },
+            { servicio: 'F21', linea: 'L2', entrada: '08:35', salida: '16:00' },
+            { servicio: 'F22', linea: 'L2', entrada: '16:00', salida: '23:45' },
+            // Línea 3 - Fin de Semana
+            { servicio: 'F23', linea: 'L3', entrada: '07:35', salida: '14:55' },
+            { servicio: 'F24', linea: 'L3', entrada: '14:55', salida: '22:20' },
+            { servicio: 'F25', linea: 'L3', entrada: '07:55', salida: '15:15' },
+            { servicio: 'F26', linea: 'L3', entrada: '15:15', salida: '22:40' },
+            { servicio: 'F27', linea: 'L3', entrada: '08:15', salida: '15:35' },
+            { servicio: 'F28', linea: 'L3', entrada: '15:35', salida: '23:15' },
+            { servicio: 'F29', linea: 'L3', entrada: '08:35', salida: '15:55' },
+            { servicio: 'F30', linea: 'L3', entrada: '15:55', salida: '23:45' },
+            // Otros Servicios - Fin de Semana
+            { servicio: 'F31', linea: 'Otros', entrada: '22:45', salida: '06:00' },
+            { servicio: 'F32', linea: 'Otros', entrada: '07:45', salida: '15:35' },
+            { servicio: 'F33', linea: 'Otros', entrada: '14:00', salida: '21:50' },
+            // Línea 1 - Domingo
+            { servicio: 'D1', linea: 'L1', entrada: '08:00', salida: '15:46' },
+            { servicio: 'D2', linea: 'L1', entrada: '15:46', salida: '23:28' },
+            { servicio: 'D3', linea: 'L1', entrada: '07:35', salida: '15:28' },
+            { servicio: 'D4', linea: 'L1', entrada: '15:28', salida: '22:25' },
+            { servicio: 'D5', linea: 'L1', entrada: '08:40', salida: '15:49' },
+            { servicio: 'D6', linea: 'L1', entrada: '15:49', salida: '22:46' },
+            { servicio: 'D7', linea: 'L1', entrada: '08:05', salida: '15:25' },
+            { servicio: 'D8', linea: 'L1', entrada: '15:25', salida: '23:07' },
+            // Línea 4 - Domingo
+            { servicio: 'D9', linea: 'L4', entrada: '07:45', salida: '14:45' },
+            { servicio: 'D10', linea: 'L4', entrada: '14:45', salida: '23:00' },
+            { servicio: 'D11', linea: 'L4', entrada: '08:10', salida: '15:10' },
+            { servicio: 'D12', linea: 'L4', entrada: '15:10', salida: '23:25' },
+            { servicio: 'D13', linea: 'L4', entrada: '07:45', salida: '15:35' },
+            { servicio: 'D14', linea: 'L4', entrada: '15:35', salida: '23:30' },
+        ];
+
+        // Generar dinámicamente la lista de líneas válidas a partir de serviciosData
+        const lineasValidas = [...new Set(serviciosData.map(serv => serv.linea))];
+        // Nota: "Línea 10" ya no está incluida en lineasValidas si no está en serviciosData
+
+        // Mapeo de colores para cada línea
+        const coloresLinea = {
+            'L1': 'rgba(251, 191, 36, 0.6)',   // Amarillo
+            'L2': 'rgba(34, 197, 94, 0.6)',    // Verde
+            'L3': 'rgba(239, 68, 68, 0.6)',    // Rojo
+            'L4': 'rgba(37, 99, 235, 0.6)',    // Azul Marino
+            'L6': 'rgba(107, 114, 128, 0.6)',  // Gris para Línea 6 (si es necesario)
+            'Otros': 'rgba(107, 114, 128, 0.6)' // Gris para otros servicios
+        };
+
+        // Variables globales
+        let registros = [];
+        let registrosAnuales = {};
+
+        // Variables para el mes y año seleccionados
+        let selectedMonth = new Date().getMonth(); // 0-11
+        let selectedYear = new Date().getFullYear();
+        let selectedYearSummary = new Date().getFullYear();
+
+        // Función para actualizar el título con mes y año seleccionados
+        function actualizarTitulo() {
+            const mesNombre = new Date(selectedYear, selectedMonth).toLocaleString('es-ES', { month: 'long' });
+            document.getElementById('mesActual').textContent = mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1);
+            document.getElementById('anioActual').textContent = selectedYear;
+            document.getElementById('anioActualResumen').textContent = selectedYearSummary;
+        }
+
+        // Función para cargar los servicios en el datalist
+        function cargarServicios() {
+            const serviciosList = document.getElementById('serviciosList');
+            serviciosList.innerHTML = '';
+            serviciosData.forEach(serv => {
+                const option = document.createElement('option');
+                option.value = serv.servicio;
+                serviciosList.appendChild(option);
+            });
+        }
+
+        // Llamar a la función para cargar los servicios al cargar la página
+        cargarServicios();
+
+        // Función para actualizar datos según el servicio seleccionado
+        document.getElementById('servicio').addEventListener('change', function () {
+            const servicio = this.value.trim();
+            const servicioData = serviciosData.find(serv => serv.servicio === servicio);
+
+            if (servicioData) {
+                document.getElementById('linea').value = servicioData.linea || '';
+                document.getElementById('horaInicioHoja').value = servicioData.entrada || '';
+                document.getElementById('horaFinHoja').value = servicioData.salida || '';
+            }
+        });
+
+        // Función para limpiar el formulario
+        document.getElementById('limpiarFormulario').addEventListener('click', function () {
+            document.getElementById('registroForm').reset();
+            document.getElementById('linea').value = '';
+            document.getElementById('horaInicioHoja').value = '';
+            document.getElementById('horaFinHoja').value = '';
+        });
+
+        // Función para marcar día libre y permitir anotaciones
+        document.getElementById('diaLibre').addEventListener('click', function () {
+            const fecha = document.getElementById('fecha').value;
+            const numeroConductor = document.getElementById('numeroConductor').value;
+
+            // Validación de campos obligatorios mínimos
+            if (!fecha || !numeroConductor) {
+                alert('Por favor, rellene los campos Fecha y Número de Conductor.');
+                return;
+            }
+
+            // Rellenar campos necesarios
+            document.getElementById('observaciones').value = 'DÍA LIBRE'; // Valor predeterminado
+            document.getElementById('servicio').value = '';
+            document.getElementById('linea').value = 'Día Libre';
+            document.getElementById('horaInicioHoja').value = '';
+            document.getElementById('horaFinHoja').value = '';
+            document.getElementById('horaInicio').value = '';
+            document.getElementById('horaSalida').value = '';
+            document.getElementById('numeroAutobus').value = '';
+            document.getElementById('totalViajeros').value = '';
+            document.getElementById('ventaBilletes').value = '';
+
+            // No guardar automáticamente para permitir anotaciones
+            alert('Campos para "Día Libre" han sido llenados. Puedes agregar anotaciones en el campo "Observaciones" y luego guardar el registro.');
+        });
+
+        // Función para marcar día de asuntos propios y permitir anotaciones
+        document.getElementById('diaAsuntosPropios').addEventListener('click', function () {
+            const fecha = document.getElementById('fecha').value;
+            const numeroConductor = document.getElementById('numeroConductor').value;
+
+            // Validación de campos obligatorios mínimos
+            if (!fecha || !numeroConductor) {
+                alert('Por favor, rellene los campos Fecha y Número de Conductor.');
+                return;
+            }
+
+            // Rellenar campos necesarios
+            document.getElementById('observaciones').value = 'DÍA ASUNTOS PROPIOS'; // Valor predeterminado
+            document.getElementById('servicio').value = '';
+            document.getElementById('linea').value = 'Día Asuntos Propios';
+            document.getElementById('horaInicioHoja').value = '';
+            document.getElementById('horaFinHoja').value = '';
+            document.getElementById('horaInicio').value = '';
+            document.getElementById('horaSalida').value = '';
+            document.getElementById('numeroAutobus').value = '';
+            document.getElementById('totalViajeros').value = '';
+            document.getElementById('ventaBilletes').value = '';
+
+            // No guardar automáticamente para permitir anotaciones
+            alert('Campos para "Día Asuntos Propios" han sido llenados. Puedes agregar anotaciones en el campo "Observaciones" y luego guardar el registro.');
+        });
+
+        // Función para marcar vacaciones y permitir anotaciones
+        document.getElementById('vacaciones').addEventListener('click', function () {
+            const fecha = document.getElementById('fecha').value;
+            const numeroConductor = document.getElementById('numeroConductor').value;
+
+            // Validación de campos obligatorios mínimos
+            if (!fecha || !numeroConductor) {
+                alert('Por favor, rellene los campos Fecha y Número de Conductor.');
+                return;
+            }
+
+            // Rellenar campos necesarios
+            document.getElementById('observaciones').value = 'VACACIONES'; // Valor predeterminado
+            document.getElementById('servicio').value = '';
+            document.getElementById('linea').value = 'Vacaciones';
+            document.getElementById('horaInicioHoja').value = '';
+            document.getElementById('horaFinHoja').value = '';
+            document.getElementById('horaInicio').value = '';
+            document.getElementById('horaSalida').value = '';
+            document.getElementById('numeroAutobus').value = '';
+            document.getElementById('totalViajeros').value = '';
+            document.getElementById('ventaBilletes').value = '';
+
+            // No guardar automáticamente para permitir anotaciones
+            alert('Campos para "Vacaciones" han sido llenados. Puedes agregar anotaciones en el campo "Observaciones" y luego guardar el registro.');
+        });
+
+        // Función para guardar el registro
+        document.getElementById('guardarRegistro').addEventListener('click', function () {
+            guardarRegistro();
+        });
+
+        function guardarRegistro() {
+            const fecha = document.getElementById('fecha').value;
+            const numeroConductor = document.getElementById('numeroConductor').value;
+            const servicio = document.getElementById('servicio').value.trim();
+            const linea = document.getElementById('linea').value.trim();
+            const horaInicioHoja = document.getElementById('horaInicioHoja').value;
+            const horaFinHoja = document.getElementById('horaFinHoja').value;
+
+            // Validación de campos obligatorios
+            const observaciones = document.getElementById('observaciones').value.trim();
+            const isDiaEspecial = ["DÍA LIBRE", "DÍA ASUNTOS PROPIOS", "VACACIONES"].includes(observaciones.toUpperCase());
+
+            if (!fecha || !numeroConductor || (!isDiaEspecial && (!servicio || !linea || !horaInicioHoja || !horaFinHoja))) {
+                alert('Por favor, rellene todos los campos obligatorios.');
+                return;
+            }
+
+            const registro = {
+                fecha: fecha,
+                numeroConductor: numeroConductor,
+                servicio: servicio || '',
+                linea: linea || '',
+                horaInicioHoja: horaInicioHoja || '',
+                horaFinHoja: horaFinHoja || '',
+                horaInicio: document.getElementById('horaInicio').value,
+                horaSalida: document.getElementById('horaSalida').value,
+                numeroAutobus: document.getElementById('numeroAutobus').value,
+                totalViajeros: Number(document.getElementById('totalViajeros').value) || 0,
+                ventaBilletes: Number(document.getElementById('ventaBilletes').value) || 0,
+                observaciones: observaciones,
+                anio: new Date(fecha).getFullYear(),
+                mes: new Date(fecha).getMonth() // 0-11
+            };
+
+            // Cálculos
+            registro.tiempoTotalHoja = isDiaEspecial ? '00:00' : calcularTiempo(registro.horaInicioHoja, registro.horaFinHoja);
+            registro.tiempoTotalOperativo = isDiaEspecial ? '00:00' : calcularTiempo(registro.horaInicio, registro.horaSalida);
+            registro.excesoJornada = isDiaEspecial ? '00:00' : calcularExceso(registro.horaSalida, registro.horaFinHoja);
+            registro.liquidacionTotal = registro.ventaBilletes * 1.3;
+
+            // Validar que la línea exista en la lista de líneas válidas si no es un día especial
+            if (!isDiaEspecial && !lineasValidas.includes(registro.linea)) {
+                alert(`La línea "${registro.linea}" no es válida. Por favor, ingrese una línea existente.`);
+                return;
+            }
+
+            // Buscar si ya existe un registro para la misma fecha y conductor
+            const indiceExistente = registros.findIndex(reg => reg.fecha === fecha && reg.numeroConductor === numeroConductor);
+            if (indiceExistente !== -1) {
+                registros.splice(indiceExistente, 1); // Eliminar registro existente
+            }
+
+            registros.push(registro);
+            // Ordenar registros por fecha descendente
+            registros.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+            guardarRegistros();
+            actualizarTabla();
+            alert('Registro guardado correctamente');
+            document.getElementById('registroForm').reset();
+            document.getElementById('linea').value = '';
+            document.getElementById('horaInicioHoja').value = '';
+            document.getElementById('horaFinHoja').value = '';
+        }
+
+        // Función para guardar registros en localStorage
+        function guardarRegistros() {
+            localStorage.setItem('registros', JSON.stringify(registros));
+        }
+
+        // Función para cargar registros desde localStorage
+        function cargarRegistros() {
+            const registrosGuardados = localStorage.getItem('registros');
+            if (registrosGuardados) {
+                try {
+                    registros = JSON.parse(registrosGuardados);
+                    registros.forEach(registro => {
+                        registro.liquidacionTotal = parseFloat(registro.liquidacionTotal) || 0;
+                        registro.totalViajeros = Number(registro.totalViajeros) || 0;
+                        registro.ventaBilletes = Number(registro.ventaBilletes) || 0;
+                    });
+                    actualizarTabla();
+                } catch (e) {
+                    console.error('Error al cargar registros desde localStorage:', e);
+                    localStorage.removeItem('registros');
+                    registros = [];
+                }
+            }
+        }
+
+        // Función para actualizar la tabla de registros
+        function actualizarTabla() {
+            const tabla = document.getElementById('tablaRegistros');
+            const tbody = tabla.getElementsByTagName('tbody')[0];
+            tbody.innerHTML = '';
+
+            // Filtrar registros del mes y año seleccionados
+            const registrosMesActual = registros.filter(registro => registro.anio === selectedYear && registro.mes === selectedMonth);
+
+            // Ordenar registros por fecha descendente
+            registrosMesActual.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+            // Variables para totales mensuales
+            let totalTiempoHoja = 0;
+            let totalTiempoOperativo = 0;
+            let totalExcesoJornada = 0;
+            let totalViajeros = 0;
+            let totalVentaBilletes = 0;
+            let totalLiquidacion = 0;
+
+            registrosMesActual.forEach((registro) => {
+                const index = registros.indexOf(registro);
+                const tr = document.createElement('tr');
+                tr.className = 'table-row';
+                if (registro.observaciones === 'DÍA LIBRE' || registro.observaciones === 'DÍA ASUNTOS PROPIOS' || registro.observaciones === 'VACACIONES') {
+                    tr.classList.add('bg-blue-100');
+                }
+
+                // Verificar si hay exceso de jornada
+                const tieneExceso = registro.excesoJornada !== '00:00';
+
+                tr.innerHTML = `
+                    <td class="border">${registro.fecha}</td>
+                    <td class="border">${registro.numeroConductor}</td>
+                    <td class="border">${registro.linea}</td>
+                    <td class="border">${registro.servicio}</td>
+                    <td class="border">${registro.horaInicioHoja}</td>
+                    <td class="border">${registro.horaFinHoja}</td>
+                    <td class="border">${registro.horaInicio}</td>
+                    <td class="border">${registro.horaSalida}</td>
+                    <td class="border">${registro.tiempoTotalHoja}</td>
+                    <td class="border">${registro.tiempoTotalOperativo}</td>
+                    <td class="border ${tieneExceso ? 'horas-extras' : ''}">${registro.excesoJornada}</td>
+                    <td class="border">${registro.numeroAutobus}</td>
+                    <td class="border">${registro.totalViajeros}</td>
+                    <td class="border">${registro.ventaBilletes}</td>
+                    <td class="border">${parseFloat(registro.liquidacionTotal).toFixed(2)} €</td>
+                    <td class="border wider-column">${registro.observaciones}</td>
+                `;
+                tr.addEventListener('click', () => {
+                    cargarRegistroEnFormulario(registro, index);
+                });
+                tbody.appendChild(tr);
+
+                // Acumulación de totales
+                totalTiempoHoja += convertirTiempoAMinutos(registro.tiempoTotalHoja);
+                totalTiempoOperativo += convertirTiempoAMinutos(registro.tiempoTotalOperativo);
+                totalExcesoJornada += convertirTiempoAMinutos(registro.excesoJornada);
+                totalViajeros += Number(registro.totalViajeros) || 0; // Asegurar conversión a número
+                totalVentaBilletes += Number(registro.ventaBilletes) || 0;
+                totalLiquidacion += parseFloat(registro.liquidacionTotal) || 0;
+            });
+
+            // Actualizar totales en la tabla
+            // Eliminada la fila "Total Mes"
+            // document.getElementById('totalViajeros').textContent = totalViajeros;
+            // document.getElementById('totalVentaBilletes').textContent = totalVentaBilletes;
+            // document.getElementById('totalLiquidacion').textContent = `${totalLiquidacion.toFixed(2)} €`;
+
+            // Actualizar la tabla anual
+            actualizarTablaAnual();
+
+            // Actualizar los gráficos
+            actualizarGraficos();
+        }
+
+        // Funciones auxiliares
+        function convertirTiempoAMinutos(tiempo) {
+            if (!tiempo || tiempo === '00:00') return 0;
+            const [horas, minutos] = tiempo.split(':').map(Number);
+            return horas * 60 + minutos;
+        }
+
+        function convertirMinutosATiempo(minutosTotales) {
+            const horas = Math.floor(minutosTotales / 60);
+            const minutos = minutosTotales % 60;
+            return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
+        }
+
+        function calcularTiempo(inicio, fin) {
+            if (!inicio || !fin) return '00:00';
+            const minutosInicio = convertirTiempoAMinutos(inicio);
+            const minutosFin = convertirTiempoAMinutos(fin);
+
+            // Ajuste si la hora de fin es menor que la de inicio (cruza medianoche)
+            let totalMinutosFin = minutosFin;
+            if (minutosFin < minutosInicio) {
+                totalMinutosFin += 24 * 60;
+            }
+
+            const diferencia = totalMinutosFin - minutosInicio;
+            return convertirMinutosATiempo(diferencia);
+        }
+
+        function calcularExceso(horaSalida, horaFinHoja) {
+            if (!horaSalida || !horaFinHoja) return '00:00';
+
+            let minutosSalida = convertirTiempoAMinutos(horaSalida);
+            let minutosFinHoja = convertirTiempoAMinutos(horaFinHoja);
+
+            // Ajuste si la hora de salida es menor que la hora fin de hoja y la diferencia es mayor a 12 horas
+            if (minutosSalida < minutosFinHoja && (minutosFinHoja - minutosSalida) > 12 * 60) {
+                minutosSalida += 24 * 60;
+            }
+
+            if (minutosSalida <= minutosFinHoja) {
+                return '00:00';
+            }
+
+            const exceso = minutosSalida - minutosFinHoja;
+            const horasExceso = Math.floor(exceso / 60);
+            const minutosExceso = exceso % 60;
+
+            return `${String(horasExceso).padStart(2, '0')}:${String(minutosExceso).padStart(2, '0')}`;
+        }
+
+        function cargarRegistroEnFormulario(registro, index) {
+            if (confirm('¿Desea cargar este registro en el formulario para editarlo?')) {
+                document.getElementById('fecha').value = registro.fecha;
+                document.getElementById('numeroConductor').value = registro.numeroConductor;
+                document.getElementById('servicio').value = registro.servicio;
+                document.getElementById('linea').value = registro.linea;
+                document.getElementById('horaInicioHoja').value = registro.horaInicioHoja;
+                document.getElementById('horaFinHoja').value = registro.horaFinHoja;
+                document.getElementById('horaInicio').value = registro.horaInicio;
+                document.getElementById('horaSalida').value = registro.horaSalida;
+                document.getElementById('numeroAutobus').value = registro.numeroAutobus;
+                document.getElementById('totalViajeros').value = registro.totalViajeros;
+                document.getElementById('ventaBilletes').value = registro.ventaBilletes;
+                document.getElementById('observaciones').value = registro.observaciones;
+
+                // Eliminar el registro actual para reemplazarlo
+                registros.splice(index, 1);
+                guardarRegistros();
+                actualizarTabla();
+            }
+        }
+
+        function actualizarTablaAnual() {
+            const tablaAnual = document.getElementById('tablaAnual').getElementsByTagName('tbody')[0];
+            tablaAnual.innerHTML = '';
+            registrosAnuales = {};
+
+            // Filtrar registros del año seleccionado
+            const registrosAnioActual = registros.filter(registro => registro.anio === selectedYearSummary);
+
+            registrosAnioActual.forEach(registro => {
+                const mesIndex = registro.mes; // 0-11
+                const mesNombre = new Date(registro.anio, mesIndex).toLocaleString('es-ES', { month: 'long' });
+
+                if (!registrosAnuales[mesNombre]) {
+                    registrosAnuales[mesNombre] = {
+                        tiempoTotalHoja: 0,
+                        tiempoTotalOperativo: 0,
+                        excesoJornada: 0,
+                        totalViajeros: 0,
+                        ventaBilletes: 0,
+                        liquidacionTotal: 0,
+                        diasLibres: 0,
+                        vacaciones: 0,
+                        diasAsuntosPropios: 0
+                    };
+                }
+
+                registrosAnuales[mesNombre].tiempoTotalHoja += convertirTiempoAMinutos(registro.tiempoTotalHoja);
+                registrosAnuales[mesNombre].tiempoTotalOperativo += convertirTiempoAMinutos(registro.tiempoTotalOperativo);
+                registrosAnuales[mesNombre].excesoJornada += convertirTiempoAMinutos(registro.excesoJornada);
+                registrosAnuales[mesNombre].totalViajeros += Number(registro.totalViajeros) || 0;
+                registrosAnuales[mesNombre].ventaBilletes += Number(registro.ventaBilletes) || 0;
+                registrosAnuales[mesNombre].liquidacionTotal += parseFloat(registro.liquidacionTotal) || 0;
+
+                // Contar Días Libres, Vacaciones y Días de Asuntos Propios
+                const observacion = registro.observaciones.toUpperCase();
+                if (observacion === "DÍA LIBRE") {
+                    registrosAnuales[mesNombre].diasLibres += 1;
+                }
+                if (observacion === "VACACIONES") {
+                    registrosAnuales[mesNombre].vacaciones += 1;
+                }
+                if (observacion === "DÍA ASUNTOS PROPIOS") {
+                    registrosAnuales[mesNombre].diasAsuntosPropios += 1;
+                }
+            });
+
+            // Variables para los totales anuales
+            let totalTiempoHojaAnual = 0;
+            let totalTiempoOperativoAnual = 0;
+            let totalExcesoJornadaAnual = 0;
+            let totalViajerosAnual = 0;
+            let totalVentaBilletesAnual = 0;
+            let totalLiquidacionAnual = 0;
+            let totalDiasLibresAnual = 0;
+            let totalVacacionesAnual = 0;
+            let totalDiasAsuntosPropiosAnual = 0;
+
+            for (const mes in registrosAnuales) {
+                const tr = document.createElement('tr');
+                const datosMes = registrosAnuales[mes];
+                tr.innerHTML = `
+                    <td class="border">${mes.charAt(0).toUpperCase() + mes.slice(1)}</td>
+                    <td class="border">${convertirMinutosATiempo(datosMes.tiempoTotalHoja)}</td>
+                    <td class="border">${convertirMinutosATiempo(datosMes.tiempoTotalOperativo)}</td>
+                    <td class="border horas-extras">${convertirMinutosATiempo(datosMes.excesoJornada)}</td> <!-- Aplicar clase para estilos -->
+                    <td class="border">${datosMes.totalViajeros}</td>
+                    <td class="border">${datosMes.ventaBilletes}</td>
+                    <td class="border">${datosMes.liquidacionTotal.toFixed(2)} €</td>
+                    <td class="border">${datosMes.diasLibres}</td>
+                    <td class="border">${datosMes.vacaciones}</td>
+                    <td class="border">${datosMes.diasAsuntosPropios}</td>
+                `;
+                tablaAnual.appendChild(tr);
+
+                // Acumulación de totales anuales
+                totalTiempoHojaAnual += datosMes.tiempoTotalHoja;
+                totalTiempoOperativoAnual += datosMes.tiempoTotalOperativo;
+                totalExcesoJornadaAnual += datosMes.excesoJornada;
+                totalViajerosAnual += datosMes.totalViajeros;
+                totalVentaBilletesAnual += datosMes.ventaBilletes;
+                totalLiquidacionAnual += datosMes.liquidacionTotal;
+                totalDiasLibresAnual += datosMes.diasLibres;
+                totalVacacionesAnual += datosMes.vacaciones;
+                totalDiasAsuntosPropiosAnual += datosMes.diasAsuntosPropios;
+            }
+
+            // Añadir fila "Total Anual"
+            const trTotalAnual = document.createElement('tr');
+            trTotalAnual.className = 'table-footer';
+            trTotalAnual.innerHTML = `
+                <td class="border font-bold">Total Anual</td>
+                <td class="border font-bold">${convertirMinutosATiempo(totalTiempoHojaAnual)}</td>
+                <td class="border font-bold">${convertirMinutosATiempo(totalTiempoOperativoAnual)}</td>
+                <td class="border font-bold horas-extras">${convertirMinutosATiempo(totalExcesoJornadaAnual)}</td>
+                <td class="border font-bold">${totalViajerosAnual}</td>
+                <td class="border font-bold">${totalVentaBilletesAnual}</td>
+                <td class="border font-bold">${totalLiquidacionAnual.toFixed(2)} €</td>
+                <td class="border font-bold">${totalDiasLibresAnual}</td>
+                <td class="border font-bold">${totalVacacionesAnual}</td>
+                <td class="border font-bold">${totalDiasAsuntosPropiosAnual}</td>
+            `;
+            tablaAnual.appendChild(trTotalAnual);
+        }
+
+        // Eventos para navegar entre meses
+        document.getElementById('mesAnterior').addEventListener('click', function () {
+            if (selectedMonth === 0) {
+                selectedMonth = 11;
+                selectedYear--;
+            } else {
+                selectedMonth--;
+            }
+            actualizarTitulo();
+            actualizarTabla();
+        });
+
+        document.getElementById('mesSiguiente').addEventListener('click', function () {
+            if (selectedMonth === 11) {
+                selectedMonth = 0;
+                selectedYear++;
+            } else {
+                selectedMonth++;
+            }
+            actualizarTitulo();
+            actualizarTabla();
+        });
+
+        // Eventos para navegar entre años en el resumen anual
+        document.getElementById('anioAnterior').addEventListener('click', function () {
+            selectedYearSummary--;
+            document.getElementById('anioActualResumen').textContent = selectedYearSummary;
+            actualizarTablaAnual();
+            actualizarGraficos();
+        });
+
+        document.getElementById('anioSiguiente').addEventListener('click', function () {
+            selectedYearSummary++;
+            document.getElementById('anioActualResumen').textContent = selectedYearSummary;
+            actualizarTablaAnual();
+            actualizarGraficos();
+        });
+
+        // Funciones para exportar, importar y eliminar registros
+        // Eliminado el botón Exportar CSV de aquí
+        // document.getElementById('exportarCSV').addEventListener('click', function () {
+        //     // Este botón ya ha sido eliminado del formulario
+        // });
+
+        // Nuevo botón Exportar CSV para el mes actual
+        document.getElementById('exportarCSVMes').addEventListener('click', function () {
+            const datosMes = registros.filter(registro => registro.anio === selectedYear && registro.mes === selectedMonth);
+            const nombreArchivo = `registros_${selectedMonth + 1}_${selectedYear}`;
+            exportarCSV(datosMes, nombreArchivo);
+        });
+
+        // Nuevo botón Exportar CSV para la tabla anual
+        document.getElementById('exportarCSVAnual').addEventListener('click', function () {
+            const datosAnual = registros.filter(registro => registro.anio === selectedYearSummary);
+            const nombreArchivo = `resumen_anual_${selectedYearSummary}`;
+            exportarCSV(datosAnual, nombreArchivo);
+        });
+
+        function exportarCSV(data, nombreArchivo) {
+            if (data.length === 0) {
+                alert('No hay registros para exportar.');
+                return;
+            }
+            let csvContent = "data:text/csv;charset=utf-8,";
+            const headers = ["fecha","numeroConductor","linea","servicio","horaInicioHoja","horaFinHoja","horaInicio","horaSalida","tiempoTotalHoja","tiempoTotalOperativo","excesoJornada","numeroAutobus","totalViajeros","ventaBilletes","liquidacionTotal","observaciones"];
+            csvContent += headers.join(";") + "\r\n";
+
+            data.forEach(registro => {
+                const row = headers.map(header => {
+                    let value = registro[header];
+                    if (typeof value === 'string') {
+                        value = value.replace(/(<([^>]+)>)/gi, "");
+                    }
+                    return `"${value}"`; // Añadir comillas para evitar problemas con separadores
+                }).join(";");
+                csvContent += row + "\r\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `${nombreArchivo}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        document.getElementById('exportarJSON').addEventListener('click', function () {
+            if (registros.length === 0) {
+                alert('No hay registros para exportar.');
+                return;
+            }
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(registros));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "registros.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            document.body.removeChild(downloadAnchorNode);
+        });
+
+        document.getElementById('btnImportarJSON').addEventListener('click', function () {
+            document.getElementById('importarJSON').click();
+        });
+
+        document.getElementById('importarJSON').addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (confirm('Esto reemplazará los registros actuales. ¿Desea continuar?')) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        registros = importedData.map(registro => ({
+                            ...registro,
+                            liquidacionTotal: parseFloat(registro.liquidacionTotal) || 0,
+                            totalViajeros: Number(registro.totalViajeros) || 0,
+                            ventaBilletes: Number(registro.ventaBilletes) || 0
+                        }));
+                        guardarRegistros();
+                        actualizarTabla();
+                        alert('Registros importados correctamente.');
+                    } catch (error) {
+                        alert('Error al importar el archivo JSON.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+            event.target.value = '';
+        });
+
+        document.getElementById('eliminarRegistros').addEventListener('click', function () {
+            if (confirm('Esta acción eliminará todos los registros. ¿Desea continuar?')) {
+                registros = [];
+                guardarRegistros();
+                actualizarTabla();
+                alert('Todos los registros han sido eliminados.');
+            }
+        });
+
+        // Inicializar la aplicación
+        actualizarTitulo();
+        cargarRegistros();
+        actualizarTabla();
+        actualizarTablaAnual();
+
+        // Función para actualizar los gráficos
+        function actualizarGraficos() {
+            // Procesar datos para cada gráfico
+            const diasPorLinea = {};
+            const pasajerosPorLinea = {};
+            const horasPorLinea = {};
+            const excesoPorServicio = {};
+
+            registros.forEach(registro => {
+                // Excluir días especiales
+                const observacion = registro.observaciones.toUpperCase();
+                if (["DÍA LIBRE", "DÍA ASUNTOS PROPIOS", "VACACIONES"].includes(observacion)) {
+                    return;
+                }
+
+                const linea = registro.linea || 'Otros';
+                const servicio = registro.servicio || 'Sin Servicio';
+
+                // Excluir líneas no válidas
+                if (!lineasValidas.includes(linea) && linea !== 'Otros') {
+                    return;
+                }
+
+                // Cantidad de días trabajados por línea
+                if (!diasPorLinea[linea]) {
+                    diasPorLinea[linea] = new Set();
+                }
+                diasPorLinea[linea].add(registro.fecha);
+
+                // Pasajeros por línea
+                if (!pasajerosPorLinea[linea]) {
+                    pasajerosPorLinea[linea] = 0;
+                }
+                pasajerosPorLinea[linea] += registro.totalViajeros;
+
+                // Horas por línea (sumar tiempoTotalOperativo en minutos)
+                if (!horasPorLinea[linea]) {
+                    horasPorLinea[linea] = 0;
+                }
+                horasPorLinea[linea] += convertirTiempoAMinutos(registro.tiempoTotalOperativo);
+
+                // Exceso por servicio
+                if (registro.excesoJornada !== '00:00') {
+                    if (!excesoPorServicio[servicio]) {
+                        excesoPorServicio[servicio] = 0;
+                    }
+                    excesoPorServicio[servicio]++;
+                }
+            });
+
+            // Preparar datos para el gráfico de días por línea
+            const labelsDias = Object.keys(diasPorLinea);
+            const dataDias = labelsDias.map(linea => diasPorLinea[linea].size);
+
+            // Preparar datos para el gráfico de pasajeros por línea
+            const labelsPasajeros = Object.keys(pasajerosPorLinea);
+            const dataPasajeros = labelsPasajeros.map(linea => pasajerosPorLinea[linea]);
+
+            // Preparar datos para el gráfico de horas por línea
+            const labelsHoras = Object.keys(horasPorLinea);
+            const dataHoras = labelsHoras.map(linea => horasPorLinea[linea] / 60); // Convertir a horas
+
+            // Preparar datos para el gráfico de exceso por servicio
+            const labelsExceso = Object.keys(excesoPorServicio);
+            const dataExceso = labelsExceso.map(servicio => excesoPorServicio[servicio]);
+
+            // Crear o actualizar el gráfico de días por línea
+            if (graficoDiasPorLinea) {
+                graficoDiasPorLinea.data.labels = labelsDias;
+                graficoDiasPorLinea.data.datasets[0].data = dataDias;
+                graficoDiasPorLinea.data.datasets[0].backgroundColor = labelsDias.map(linea => coloresLinea[linea] || 'rgba(107, 114, 128, 0.6)');
+                graficoDiasPorLinea.data.datasets[0].borderColor = labelsDias.map(linea => coloresLinea[linea]?.replace('0.6', '1') || 'rgba(107, 114, 128, 1)');
+                graficoDiasPorLinea.update();
+            } else {
+                const ctxDias = document.getElementById('graficoDiasPorLinea').getContext('2d');
+                graficoDiasPorLinea = new Chart(ctxDias, {
+                    type: 'bar',
+                    data: {
+                        labels: labelsDias,
+                        datasets: [{
+                            label: 'Días Trabajados',
+                            data: dataDias,
+                            backgroundColor: labelsDias.map(linea => coloresLinea[linea] || 'rgba(107, 114, 128, 0.6)'),
+                            borderColor: labelsDias.map(linea => coloresLinea[linea]?.replace('0.6', '1') || 'rgba(107, 114, 128, 1)'),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            title: { display: false }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Días'
+                                },
+                                ticks: {
+                                    precision: 0
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Línea'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Crear o actualizar el gráfico de pasajeros por línea
+            if (graficoPasajerosPorLinea) {
+                graficoPasajerosPorLinea.data.labels = labelsPasajeros;
+                graficoPasajerosPorLinea.data.datasets[0].data = dataPasajeros;
+                graficoPasajerosPorLinea.data.datasets[0].backgroundColor = labelsPasajeros.map(linea => coloresLinea[linea] || 'rgba(107, 114, 128, 0.6)');
+                graficoPasajerosPorLinea.update();
+            } else {
+                const ctxPasajeros = document.getElementById('graficoPasajerosPorLinea').getContext('2d');
+                graficoPasajerosPorLinea = new Chart(ctxPasajeros, {
+                    type: 'pie',
+                    data: {
+                        labels: labelsPasajeros,
+                        datasets: [{
+                            label: 'Pasajeros Transportados',
+                            data: dataPasajeros,
+                            backgroundColor: labelsPasajeros.map(linea => coloresLinea[linea] || 'rgba(107, 114, 128, 0.6)'),
+                            borderColor: '#ffffff',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' },
+                            title: { display: false }
+                        }
+                    }
+                });
+            }
+
+            // Crear o actualizar el gráfico de horas por línea
+            if (graficoHorasPorLinea) {
+                graficoHorasPorLinea.data.labels = labelsHoras;
+                graficoHorasPorLinea.data.datasets[0].data = dataHoras;
+                graficoHorasPorLinea.data.datasets[0].backgroundColor = labelsHoras.map(linea => coloresLinea[linea] || 'rgba(107, 114, 128, 0.6)');
+                graficoHorasPorLinea.data.datasets[0].borderColor = labelsHoras.map(linea => coloresLinea[linea]?.replace('0.6', '1') || 'rgba(107, 114, 128, 1)');
+                graficoHorasPorLinea.update();
+            } else {
+                const ctxHoras = document.getElementById('graficoHorasPorLinea').getContext('2d');
+                graficoHorasPorLinea = new Chart(ctxHoras, {
+                    type: 'bar',
+                    data: {
+                        labels: labelsHoras,
+                        datasets: [{
+                            label: 'Horas Trabajadas',
+                            data: dataHoras,
+                            backgroundColor: labelsHoras.map(linea => coloresLinea[linea] || 'rgba(107, 114, 128, 0.6)'),
+                            borderColor: labelsHoras.map(linea => coloresLinea[linea]?.replace('0.6', '1') || 'rgba(107, 114, 128, 1)'),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            title: { display: false }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Horas'
+                                },
+                                ticks: {
+                                    // Asegurar que las horas sean enteras si es necesario
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Línea'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Crear o actualizar el gráfico de exceso por servicio
+            if (graficoExcesoPorServicio) {
+                graficoExcesoPorServicio.data.labels = labelsExceso;
+                graficoExcesoPorServicio.data.datasets[0].data = dataExceso;
+                graficoExcesoPorServicio.update();
+            } else {
+                const ctxExceso = document.getElementById('graficoExcesoPorServicio').getContext('2d');
+                graficoExcesoPorServicio = new Chart(ctxExceso, {
+                    type: 'bar',
+                    data: {
+                        labels: labelsExceso,
+                        datasets: [{
+                            label: 'Cantidad de Excesos',
+                            data: dataExceso,
+                            backgroundColor: 'rgba(251, 191, 36, 0.6)',
+                            borderColor: 'rgba(251, 191, 36, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            title: { display: false }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Cantidad de Excesos'
+                                },
+                                ticks: {
+                                    stepSize: 1, // Asegurar que las cantidades sean enteras
+                                    precision: 0
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Servicio'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Función para generar colores aleatorios para los gráficos de tipo pie
+        function generarColores(numero) {
+            const colores = [];
+            const coloresPredefinidos = [
+                'rgba(59, 130, 246, 0.6)',
+                'rgba(34, 197, 94, 0.6)',
+                'rgba(251, 191, 36, 0.6)',
+                'rgba(219, 39, 119, 0.6)',
+                'rgba(168, 85, 247, 0.6)',
+                'rgba(168, 204, 204, 0.6)',
+                'rgba(224, 231, 255, 0.6)',
+                'rgba(254, 202, 202, 0.6)'
+            ];
+            for (let i = 0; i < numero; i++) {
+                const color = coloresPredefinidos[i % coloresPredefinidos.length];
+                colores.push(color);
+            }
+            return colores;
+        }
+
+        // Función para crear o actualizar los gráficos
+        function crearGraficos() {
+            actualizarGraficos();
+        }
+
+        // Llamar a la función para crear los gráficos al cargar la página
+        crearGraficos();
+    </script>
+</body>
+</html>
